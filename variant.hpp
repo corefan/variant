@@ -203,6 +203,19 @@ struct variant_helper<T, Types...>
         }
     }
 
+    VARIANT_INLINE static void swap(const std::size_t id, void * first, void * second)
+    {
+        if (id == sizeof...(Types))
+        {
+            std::swap(*reinterpret_cast<T*>(first),
+                      *reinterpret_cast<T*>(second));
+        }
+        else
+        {
+            variant_helper<Types...>::swap(id, first, second);
+        }
+    }
+
     VARIANT_INLINE static void copy(const std::size_t old_id, const void * old_value, void * new_value)
     {
         if (old_id == sizeof...(Types))
@@ -221,6 +234,7 @@ template<> struct variant_helper<>
     VARIANT_INLINE static void destroy(const std::size_t, void *) {}
     VARIANT_INLINE static void move(const std::size_t, void *, void *) {}
     VARIANT_INLINE static void copy(const std::size_t, const void *, void *) {}
+    VARIANT_INLINE static void swap(const std::size_t, const void *, void *) {}
 };
 
 namespace detail {
@@ -563,14 +577,30 @@ public:
 
     friend void swap(variant<Types...> & first, variant<Types...> & second)
     {
-        using std::swap; //enable ADL
-        swap(first.type_index, second.type_index);
-        swap(first.data, second.data);
+        using std::swap;
+
+        if (first.type_index == second.type_index) {
+            helper_type::swap(first.type_index, &second.data, &first.data);
+
+        } else {
+            variant<Types...> temp(std::move(first));
+            helper_type::move(second.type_index, &second.data, &first.data);
+            helper_type::move(temp.type_index, &temp.data, &second.data);
+            swap(first.type_index, second.type_index);
+        }
+        // TODO if POD
+        // swap(first.type_index, second.type_index);
+        // swap(first.data, second.data);
     }
 
     VARIANT_INLINE variant<Types...>& operator=(variant<Types...> other)
     {
-        swap(*this, other);
+        // swap(*this, other);
+
+        helper_type::destroy(type_index, &data);
+        helper_type::move(other.type_index, &other.data, &data);
+        type_index = other.type_index;
+
         return *this;
     }
 
@@ -579,8 +609,18 @@ public:
     template <typename T>
     VARIANT_INLINE variant<Types...>& operator=(T && rhs) noexcept
     {
-        variant<Types...> temp(std::forward<T>(rhs));
-        swap(*this, temp);
+        // The modified swap does not work for this case in unit tests..
+        // variant<Types...> temp(std::forward<T>(rhs));
+        // swap(*this, temp);
+
+        helper_type::destroy(type_index, &data);
+
+        constexpr std::size_t index = detail::value_traits<typename std::remove_reference<T>::type, Types...>::index;
+        constexpr std::size_t target_index = sizeof...(Types) - index - 1;
+        using target_type = typename detail::select_type<target_index, Types...>::type;
+        new (&data) target_type(std::forward<T>(rhs));
+        type_index = index;
+
         return *this;
     }
 
@@ -588,8 +628,17 @@ public:
     template <typename T>
     VARIANT_INLINE variant<Types...>& operator=(T const& rhs)
     {
-        variant<Types...> temp(rhs);
-        swap(*this, temp);
+        // variant<Types...> temp(rhs);
+        // swap(*this, temp);
+
+        helper_type::destroy(type_index, &data);
+
+        constexpr std::size_t index = detail::value_traits<typename std::remove_reference<T>::type, Types...>::index;
+        constexpr std::size_t target_index = sizeof...(Types) - index - 1;
+        using target_type = typename detail::select_type<target_index, Types...>::type;
+        new (&data) target_type(rhs);
+        type_index = index;
+
         return *this;
     }
 
