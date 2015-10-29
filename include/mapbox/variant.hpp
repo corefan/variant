@@ -820,6 +820,11 @@ public:
         return static_cast<int>(sizeof...(Types)-detail::direct_type<T, Types...>::index - 1);
     }
 
+    template<typename T>
+    struct type {
+        static const size_t value = sizeof...(Types)-detail::direct_type<T, Types...>::index-1;
+    };
+
     // visitor
     // unary
     template <typename F, typename V, typename R = typename detail::result_of_unary_visit<F, first_type>::type>
