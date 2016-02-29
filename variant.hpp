@@ -299,7 +299,7 @@ struct dispatcher<F, V, R, T, Types...>
     {
         if (v.template is<T>())
         {
-            return f(unwrapper<T>::apply_const(v.template get<T>()));
+            return f(unwrapper<T>::apply_const(v.template get_unsafe<T>()));
         }
         else
         {
@@ -311,7 +311,7 @@ struct dispatcher<F, V, R, T, Types...>
     {
         if (v.template is<T>())
         {
-            return f(unwrapper<T>::apply(v.template get<T>()));
+            return f(unwrapper<T>::apply(v.template get_unsafe<T>()));
         }
         else
         {
@@ -325,12 +325,12 @@ struct dispatcher<F, V, R, T>
 {
     VARIANT_INLINE static R apply_const(V const& v, F&& f)
     {
-        return f(unwrapper<T>::apply_const(v.template get<T>()));
+        return f(unwrapper<T>::apply_const(v.template get_unsafe<T>()));
     }
 
     VARIANT_INLINE static R apply(V& v, F&& f)
     {
-        return f(unwrapper<T>::apply(v.template get<T>()));
+        return f(unwrapper<T>::apply(v.template get_unsafe<T>()));
     }
 };
 
@@ -344,8 +344,8 @@ struct binary_dispatcher_rhs<F, V, R, T0, T1, Types...>
     {
         if (rhs.template is<T1>()) // call binary functor
         {
-            return f(unwrapper<T0>::apply_const(lhs.template get<T0>()),
-                     unwrapper<T1>::apply_const(rhs.template get<T1>()));
+            return f(unwrapper<T0>::apply_const(lhs.template get_unsafe<T0>()),
+                     unwrapper<T1>::apply_const(rhs.template get_unsafe<T1>()));
         }
         else
         {
@@ -357,8 +357,8 @@ struct binary_dispatcher_rhs<F, V, R, T0, T1, Types...>
     {
         if (rhs.template is<T1>()) // call binary functor
         {
-            return f(unwrapper<T0>::apply(lhs.template get<T0>()),
-                     unwrapper<T1>::apply(rhs.template get<T1>()));
+            return f(unwrapper<T0>::apply(lhs.template get_unsafe<T0>()),
+                     unwrapper<T1>::apply(rhs.template get_unsafe<T1>()));
         }
         else
         {
@@ -372,14 +372,14 @@ struct binary_dispatcher_rhs<F, V, R, T0, T1>
 {
     VARIANT_INLINE static R apply_const(V const& lhs, V const& rhs, F&& f)
     {
-        return f(unwrapper<T0>::apply_const(lhs.template get<T0>()),
-                 unwrapper<T1>::apply_const(rhs.template get<T1>()));
+        return f(unwrapper<T0>::apply_const(lhs.template get_unsafe<T0>()),
+                 unwrapper<T1>::apply_const(rhs.template get_unsafe<T1>()));
     }
 
     VARIANT_INLINE static R apply(V& lhs, V& rhs, F&& f)
     {
-        return f(unwrapper<T0>::apply(lhs.template get<T0>()),
-                 unwrapper<T1>::apply(rhs.template get<T1>()));
+        return f(unwrapper<T0>::apply(lhs.template get_unsafe<T0>()),
+                 unwrapper<T1>::apply(rhs.template get_unsafe<T1>()));
     }
 };
 
@@ -393,8 +393,8 @@ struct binary_dispatcher_lhs<F, V, R, T0, T1, Types...>
     {
         if (lhs.template is<T1>()) // call binary functor
         {
-            return f(unwrapper<T1>::apply_const(lhs.template get<T1>()),
-                     unwrapper<T0>::apply_const(rhs.template get<T0>()));
+            return f(unwrapper<T1>::apply_const(lhs.template get_unsafe<T1>()),
+                     unwrapper<T0>::apply_const(rhs.template get_unsafe<T0>()));
         }
         else
         {
@@ -406,8 +406,8 @@ struct binary_dispatcher_lhs<F, V, R, T0, T1, Types...>
     {
         if (lhs.template is<T1>()) // call binary functor
         {
-            return f(unwrapper<T1>::apply(lhs.template get<T1>()),
-                     unwrapper<T0>::apply(rhs.template get<T0>()));
+            return f(unwrapper<T1>::apply(lhs.template get_unsafe<T1>()),
+                     unwrapper<T0>::apply(rhs.template get_unsafe<T0>()));
         }
         else
         {
@@ -421,14 +421,14 @@ struct binary_dispatcher_lhs<F, V, R, T0, T1>
 {
     VARIANT_INLINE static R apply_const(V const& lhs, V const& rhs, F&& f)
     {
-        return f(unwrapper<T1>::apply_const(lhs.template get<T1>()),
-                 unwrapper<T0>::apply_const(rhs.template get<T0>()));
+        return f(unwrapper<T1>::apply_const(lhs.template get_unsafe<T1>()),
+                 unwrapper<T0>::apply_const(rhs.template get_unsafe<T0>()));
     }
 
     VARIANT_INLINE static R apply(V& lhs, V& rhs, F&& f)
     {
-        return f(unwrapper<T1>::apply(lhs.template get<T1>()),
-                 unwrapper<T0>::apply(rhs.template get<T0>()));
+        return f(unwrapper<T1>::apply(lhs.template get_unsafe<T1>()),
+                 unwrapper<T0>::apply(rhs.template get_unsafe<T0>()));
     }
 };
 
@@ -444,8 +444,8 @@ struct binary_dispatcher<F, V, R, T, Types...>
         {
             if (v1.template is<T>())
             {
-                return f(unwrapper<T>::apply_const(v0.template get<T>()),
-                         unwrapper<T>::apply_const(v1.template get<T>())); // call binary functor
+                return f(unwrapper<T>::apply_const(v0.template get_unsafe<T>()),
+                         unwrapper<T>::apply_const(v1.template get_unsafe<T>())); // call binary functor
             }
             else
             {
@@ -465,8 +465,8 @@ struct binary_dispatcher<F, V, R, T, Types...>
         {
             if (v1.template is<T>())
             {
-                return f(unwrapper<T>::apply(v0.template get<T>()),
-                         unwrapper<T>::apply(v1.template get<T>())); // call binary functor
+                return f(unwrapper<T>::apply(v0.template get_unsafe<T>()),
+                         unwrapper<T>::apply(v1.template get_unsafe<T>())); // call binary functor
             }
             else
             {
@@ -486,14 +486,14 @@ struct binary_dispatcher<F, V, R, T>
 {
     VARIANT_INLINE static R apply_const(V const& v0, V const& v1, F&& f)
     {
-        return f(unwrapper<T>::apply_const(v0.template get<T>()),
-                 unwrapper<T>::apply_const(v1.template get<T>())); // call binary functor
+        return f(unwrapper<T>::apply_const(v0.template get_unsafe<T>()),
+                 unwrapper<T>::apply_const(v1.template get_unsafe<T>())); // call binary functor
     }
 
     VARIANT_INLINE static R apply(V& v0, V& v1, F&& f)
     {
-        return f(unwrapper<T>::apply(v0.template get<T>()),
-                 unwrapper<T>::apply(v1.template get<T>())); // call binary functor
+        return f(unwrapper<T>::apply(v0.template get_unsafe<T>()),
+                 unwrapper<T>::apply(v1.template get_unsafe<T>())); // call binary functor
     }
 };
 
@@ -675,6 +675,51 @@ class variant
     }
 
     // get<T>()
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<T, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T& get_unsafe()
+    {
+        return *reinterpret_cast<T*>(&data);
+    }
+
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<T, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T const& get_unsafe() const
+    {
+        return *reinterpret_cast<T const*>(&data);
+    }
+
+    // get<T>() - T stored as recursive_wrapper<T>
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<recursive_wrapper<T>, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T& get_unsafe()
+    {
+        return (*reinterpret_cast<recursive_wrapper<T>*>(&data)).get();
+    }
+
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<recursive_wrapper<T>, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T const& get_unsafe() const
+    {
+        return (*reinterpret_cast<recursive_wrapper<T> const*>(&data)).get();
+    }
+
+    // get<T>() - T stored as std::reference_wrapper<T>
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<std::reference_wrapper<T>, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T& get_unsafe()
+    {
+        return (*reinterpret_cast<std::reference_wrapper<T>*>(&data)).get();
+    }
+
+    template <typename T, typename std::enable_if<
+                              (detail::direct_type<std::reference_wrapper<T const>, Types...>::index != detail::invalid_value)>::type* = nullptr>
+    VARIANT_INLINE T const& get_unsafe() const
+    {
+        return (*reinterpret_cast<std::reference_wrapper<T const> const*>(&data)).get();
+    }
+
+
     template <typename T, typename std::enable_if<
                               (detail::direct_type<T, Types...>::index != detail::invalid_value)>::type* = nullptr>
     VARIANT_INLINE T& get()
