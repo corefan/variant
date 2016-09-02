@@ -325,7 +325,7 @@ TEST_CASE("implicit conversion", "[variant][implicit conversion]")
 TEST_CASE("implicit conversion to first type in variant type list", "[variant][implicit conversion]")
 {
     using variant_type = mapbox::util::variant<long, char>;
-    variant_type var = 5.0; // converted to long
+    variant_type var = 5l; // converted to long
     REQUIRE(var.get<long>() == 5);
     REQUIRE_THROWS_AS({
         var.get<char>();
@@ -575,4 +575,19 @@ TEST_CASE("recursive wrapper")
     variant_type v(1);
     REQUIRE(v.is<int>());
     REQUIRE(v.get<int>() == 1);
+}
+
+
+TEST_CASE("variant : direct_type helper should match T, references (T&)  and const references (T const&) to the original type T)")
+{
+    using value = mapbox::util::variant<bool, std::uint64_t>;
+
+    std::uint64_t u(1234);
+    REQUIRE(value(u).is<std::uint64_t>()); // matches T
+
+    std::uint64_t& ur(u);
+    REQUIRE(value(ur).is<std::uint64_t>()); // matches T&
+
+    std::uint64_t const& ucr(u);
+    REQUIRE(value(ucr).is<std::uint64_t>()); // matches T const&
 }
