@@ -10,8 +10,10 @@
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
+#include <functional>
 
 #include "recursive_wrapper.hpp"
+#include "variant_visitor.hpp"
 
 // clang-format off
 // [[deprecated]] is only available in C++14, use this for the time being
@@ -105,9 +107,22 @@ struct direct_type<T>
 
 #if __cpp_lib_logical_traits >= 201510L
 
+using std::conjunction;
 using std::disjunction;
 
 #else
+
+template <typename...>
+struct conjunction : std::true_type {};
+
+template <typename B1>
+struct conjunction<B1> : B1 {};
+
+template <typename B1, typename B2>
+struct conjunction<B1, B2> : std::conditional<B1::value, B2, B1>::type {};
+
+template <typename B1, typename... Bs>
+struct conjunction<B1, Bs...> : std::conditional<B1::value, conjunction<Bs...>, B1>::type {};
 
 template <typename...>
 struct disjunction : std::false_type {};
@@ -531,6 +546,16 @@ private:
     Variant const& lhs_;
 };
 
+// hashing visitor
+struct hasher
+{
+    template <typename T>
+    std::size_t operator()(const T& hashable) const
+    {
+        return std::hash<T>{}(hashable);
+    }
+};
+
 } // namespace detail
 
 struct no_init
@@ -546,8 +571,11 @@ class variant
 private:
     static const std::size_t data_size = detail::static_max<sizeof(Types)...>::value;
     static const std::size_t data_align = detail::static_max<alignof(Types)...>::value;
-
-    using first_type = typename std::tuple_element<0, std::tuple<Types...>>::type;
+public:
+    struct adapted_variant_tag;
+    using types = std::tuple<Types...>;
+private:
+    using first_type = typename std::tuple_element<0, types>::type;
     using data_type = typename std::aligned_storage<data_size, data_align>::type;
     using helper_type = detail::variant_helper<Types...>;
 
@@ -567,7 +595,7 @@ public:
 
     // http://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers
     template <typename T, typename Traits = detail::value_traits<T, Types...>,
-              typename Enable = typename std::enable_if<Traits::is_valid>::type>
+              typename Enable = typename std::enable_if<Traits::is_valid && !std::is_same<variant<Types...>, typename Traits::value_type>::value>::type >
     VARIANT_INLINE variant(T&& val) noexcept(std::is_nothrow_constructible<typename Traits::target_type, T&&>::value)
         : type_index(Traits::index)
     {
@@ -580,7 +608,8 @@ public:
         helper_type::copy(old.type_index, &old.data, &data);
     }
 
-    VARIANT_INLINE variant(variant<Types...>&& old) noexcept(std::is_nothrow_move_constructible<std::tuple<Types...>>::value)
+    VARIANT_INLINE variant(variant<Types...>&& old)
+        noexcept(detail::conjunction<std::is_nothrow_move_constructible<Types>...>::value)
         : type_index(old.type_index)
     {
         helper_type::move(old.type_index, &old.data, &data);
@@ -863,6 +892,22 @@ public:
         return detail::binary_dispatcher<F, V, R, Types...>::apply(v0, v1, std::forward<F>(f));
     }
 
+    // match
+    // unary
+    template <typename... Fs>
+    auto VARIANT_INLINE match(Fs&&... fs) const
+        -> decltype(variant::visit(*this, ::mapbox::util::make_visitor(std::forward<Fs>(fs)...)))
+    {
+        return variant::visit(*this, ::mapbox::util::make_visitor(std::forward<Fs>(fs)...));
+    }
+    // non-const
+    template <typename... Fs>
+    auto VARIANT_INLINE match(Fs&&... fs)
+        -> decltype(variant::visit(*this, ::mapbox::util::make_visitor(std::forward<Fs>(fs)...)))
+    {
+        return variant::visit(*this, ::mapbox::util::make_visitor(std::forward<Fs>(fs)...));
+    }
+
     ~variant() noexcept // no-throw destructor
     {
         helper_type::destroy(type_index, &data);
@@ -972,5 +1017,16 @@ ResultType const& get_unchecked(T const& var)
 }
 } // namespace util
 } // namespace mapbox
+
+// hashable iff underlying types are hashable
+namespace std {
+template <typename... Types>
+struct hash< ::mapbox::util::variant<Types...>> {
+    std::size_t operator()(const ::mapbox::util::variant<Types...>& v) const noexcept
+    {
+        return ::mapbox::util::apply_visitor(::mapbox::util::detail::hasher{}, v);
+    }
+};
+}
 
 #endif // MAPBOX_UTIL_VARIANT_HPP
